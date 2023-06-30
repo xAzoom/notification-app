@@ -1,0 +1,51 @@
+version: '3.7'
+services:
+    mysql:
+        image: mysql/mysql-server:8.0.25
+        restart: on-failure
+        environment:
+            MYSQL_USER: dev
+            MYSQL_PASSWORD: dev
+            MYSQL_DATABASE: dev
+            MYSQL_ROOT_PASSWORD: password
+        volumes:
+            - mysql:/var/lib/mysql
+            - ./docker/mysql/init:/docker-entrypoint-initdb.d
+        ports:
+            - 9536:3306
+    nginx:
+        build:
+            context: .
+            target: nginx_notification_app
+            args:
+                USER_ID: ${USER_ID:-}
+                GROUP_ID: ${GROUP_ID:-}
+                USER_NAME: ${USER_NAME-}
+        ports:
+            - 9500:9500
+        volumes:
+            - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+            - ./public:/var/www/html/public:ro
+        depends_on:
+            - php
+    php:
+        image: php_notification_app
+        build:
+            context: .
+            target: php_notification_app
+            args:
+                USER_ID: ${USER_ID:-}
+                GROUP_ID: ${GROUP_ID:-}
+                USER_NAME: ${USER_NAME-}
+        environment:
+            PHP_OPCACHE_VALIDATE_TIMESTAMPS: 1
+            APP_SECRET: EDITME
+        volumes:
+            - .:/var/www/html:rw
+            - ./var:/var/www/html/var:rw
+            - ./public:/var/www/html/public:rw
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+volumes:
+    mysql:

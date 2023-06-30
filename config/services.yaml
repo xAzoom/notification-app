@@ -1,0 +1,60 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    App\UI\REST\:
+        resource: '../src/UI/REST/'
+        exclude: '../src/UI/REST/Core'
+        tags: [ 'controller.service_arguments' ]
+
+    Psr\Clock\ClockInterface:
+        class: App\Shared\Clock
+
+
+    App\Shared\Application\Bus\CommandBus\CommandBus:
+        arguments:
+            $messageBus: '@app.command_bus'
+
+    App\Shared\Application\Bus\EventBus\EventBus:
+        arguments:
+            $messageBus: '@app.event_bus'
+
+    App\Shared\Application\Bus\DomainEventBus\DomainEventBus:
+        arguments:
+            $messageBus: '@app.domain_event_bus'
+
+    _instanceof:
+        App\Shared\Application\Bus\CommandBus\CommandHandlerInterface:
+            tags:
+                - { name: messenger.message_handler, bus: app.command_bus }
+
+        App\Shared\Application\Bus\EventBus\EventHandlerInterface:
+            tags:
+                - { name: messenger.message_handler, bus: app.event_bus }
+
+        App\Shared\Application\Bus\DomainEventBus\DomainEventHandlerInterface:
+            tags:
+                - { name: messenger.message_handler, bus: app.domain_event_bus }
+
+    kernel.listener.prefix:
+        class: App\Shared\DockerListener\TablePrefixEventListener
+        tags:
+            - { name: doctrine.event_listener, event: loadClassMetadata, method: loadClassMetadata }

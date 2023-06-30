@@ -1,0 +1,10 @@
+rest_account:
+    resource: ../../src/UI/REST
+    type: annotation
+    prefix: '/api'
+#    defaults:
+#        _format: json
+
+kernel:
+    resource: ../../src/Kernel.php
+    type: annotation
